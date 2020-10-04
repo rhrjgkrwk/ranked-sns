@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="timeline">
+	<resultMap id="timelineResultMap" type="TimelineVO">
+		<id column="user_id" javaType="int" />
+		<association property="userVO" javaType="UserVO">
+			<id property="userId" column="user_id" />
+			<result property="userName" column="user_name" />
+			<result property="userPassword" column="user_password" />
+			<result property="userEmail" column="user_email" />
+			<result property="score" column="score" />
+			<result property="mainPostId" column="main_post_id" />
+		</association>
+
+		<collection property="postList" ofType="PostVO">
+			<id property="postId" column="post_id" />
+			<result property="postTitle" column="post_title" />
+			<result property="postContent" column="post_content" />
+			<result property="postColor" column="post_color" />
+			<result property="postDatetime" column="post_datetime" />
+			<result property="likeCnt" column="like_cnt" />
+			<result property="commentCnt" column="comment_cnt" />
+			<result property="checkLiked" column="check_liked" />
+		</collection>
+	</resultMap>
+
+	<select id="getTimeline" parameterType="map" resultMap="timelineResultMap">
+		SELECT 
+			user.user_id AS user_id,
+			user.user_name AS user_name,
+			user.user_email AS user_email,
+			user.user_password AS user_password,
+			user.score AS score,
+			user.main_post_id AS main_post_id,
+			post.post_id AS post_id,
+			post.post_title AS post_title,
+			post.post_content AS post_content,
+			post.post_color AS post_color,
+			post.post_datetime AS post_datetime,
+			post.like_cnt AS like_cnt,
+			post.comment_cnt AS comment_cnt,
+			l.check_liked AS check_liked
+		FROM
+				user 
+			LEFT OUTER JOIN 
+				post 
+			ON user.user_id = post.user_id
+			LEFT OUTER JOIN
+				(SELECT like_post_id, COUNT(*) as check_liked
+				FROM likes
+				WHERE like_user_id = #{sessionUserId}
+				GROUP BY like_post_id) AS l
+			ON post.post_id = l.like_post_id
+		WHERE 
+			user.user_id = #{timelineUserId}
+		ORDER BY post_datetime DESC
+	</select>
+</mapper>

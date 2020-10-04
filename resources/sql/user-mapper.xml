@@ -1,0 +1,155 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="user">
+<!-- 회원추가 -->
+	<insert id="addUser" parameterType="UserVO">
+		INSERT INTO 
+			user (user_email, user_name, user_password, reg_date)
+		VALUES
+			(#{userEmail},#{userName}, #{userPassword}, SYSDATE())
+	</insert>
+	
+
+<!-- 회원정보 가져오기 : 아래 쿼리들을 합치는 방법을 알아보자. -->
+	<select id="getUser" resultType="UserVO">
+		SELECT
+			user_id,
+			user_email,
+			user_name,
+			user_password,
+			score,
+			main_post_id,
+			reg_date,
+		FROM
+			user
+	</select>
+	
+	<select id="getAllUser" resultType="UserVO">
+		SELECT
+			user_id,
+			user_email,
+			user_name,
+			user_password,
+			score,
+			main_post_id,
+			reg_date
+		FROM
+			user
+	</select>
+	
+	<select id="loginCheck" resultType="UserVO">
+		SELECT
+			user_id,
+			user_email,
+			user_name,
+			user_password,
+			score,
+			main_post_id,
+			reg_date
+		FROM 
+			user
+		WHERE 
+			user_email = #{userEmail}
+			AND user_password = #{userPassword}
+	</select>
+	
+	<select id="emailCheck" resultType="int">
+		SELECT 
+			COUNT(*)
+		FROM
+			user
+		WHERE
+			user_email = #{userEmail}
+	</select>
+<!-- 	user timeline에서 필요한 user rank를 가져온다. -->
+	<select id="getUserRank" resultType="int">
+		SELECT
+			rank.user_rank
+		FROM
+			(SELECT 
+				(@rank := @rank + 1 ) AS rank,
+				(@final_rank := IF ( @last_score > score, @final_rank:=@final_rank+1, @final_rank ) ) AS user_rank,
+				(@last_score := score ),
+				user_id,
+				score
+			FROM
+				user,
+				(SELECT @rank := 0, @last_score := 0, @final_rank := 1) AS r
+			ORDER BY score DESC
+			) AS rank
+		WHERE user_id = #{userId}
+	</select>
+	
+<!-- user count : 회원 수를 가져오자.-->
+	<select id="getUserCount" resultType="int">
+		SELECT 
+			COUNT(user_id)
+		FROM 
+			user
+	</select>
+	
+<!-- 회원정보 수정 -->
+	<update id="setUser" parameterType="UserVO">
+		UPDATE user
+		<set>
+			<if test="userPassword != null">
+				user_password = #{userPassword},
+			</if>
+			<if test="userName != null">
+				user_name = #{userName},
+			</if>
+			<if test="mainPostId != null">
+				main_post_id = #{mainPostId},
+			</if>
+		</set>
+		WHERE user_id = #{userId}
+	</update>
+	
+	<!-- score update -->
+	<update id="setScore">
+		UPDATE
+			user
+		SET
+			score = (SELECT COUNT(*)
+							FROM post LEFT JOIN likes ON post.post_id = likes.like_post_id 
+							WHERE likes.like_date >= DATE_ADD(CURDATE(), INTERVAL -5 DAY)
+							AND post.user_id = #{userId})
+		WHERE user.user_id = #{userId}
+	</update>
+	
+	
+<!-- 회원 삭제 -->
+	<delete id="deleteUser" parameterType="int">
+		DELETE FROM user
+		WHERE user_id=#{user_id}
+	</delete>
+</mapper>
+
+
+
+<!-- 
+UPDATE 
+				user
+			INNER JOIN 
+				(SELECT post.user_id, COUNT(*) AS new_score
+				FROM post LEFT JOIN likes ON post.post_id = likes.like_post_id 
+				WHERE likes.like_date >= DATE_ADD(CURDATE(), INTERVAL -10 DAY)
+				GROUP BY post.user_id
+				ORDER BY post.user_id
+				LIMIT #{offset}, #{count}
+				) AS score
+			ON user.user_id = score.user_id
+		SET user.score = score.new_score
+ -->
+
+
+
+
+
+
+
+
+
+

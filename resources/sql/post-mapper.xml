@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="post">
+
+	<insert id="addPost" parameterType="PostVO" useGeneratedKeys="true" keyProperty="postId">
+		INSERT
+		INTO post
+			(user_id, post_title, post_content, post_color, post_scope, post_datetime)
+		VALUES
+			(#{userId}, #{postTitle}, #{postContent}, #{postColor}, #{postScope}, SYSDATE())
+	</insert>
+
+	<!--포스트 하나만 가져온다... 메인 포스트를 가져오거나 게시글 수정할때 쓸 것이다. -->
+	<select id="getPost" parameterType="int" resultType="PostVO">
+		SELECT 
+			post_id,
+			post_title,
+			post_content,
+			post_scope,
+			post_datetime,
+			post_color,
+			user_id,
+			like_cnt,
+			comment_cnt
+		FROM 
+			post
+		WHERE 
+			post_id = #{postId}
+	</select>
+	
+	<select id="getPostLikeCnt" resultType="int" parameterType="int">
+		SELECT 
+			like_cnt
+		FROM 
+			post
+		WHERE 
+			post_id = #{postId}
+	</select>
+	
+	<select id="getPostCommentCnt" resultType="int" parameterType="int">
+		SELECT 
+			comment_cnt
+		FROM 
+			post
+		WHERE 
+			post_id = #{postId}
+	</select>
+	
+
+	<!--수정시 가져온 포스트를 form에 채워주고 수정을 하도록 한다. -->
+	<update id="setPost" parameterType="PostVO">
+		UPDATE post
+		SET
+			post_title = #{postTitle},
+			post_content= #{postContent},
+			post_color = #{postColor},
+			post_scope = #{postScope}
+		WHERE
+			post_id =#{postId}
+	</update>
+	<!-- 댓글 수를 업데이트 한다. -->
+	<update id="setPostCommentCnt">
+		UPDATE post
+		SET
+			comment_cnt = comment_cnt + #{commentNum}
+		WHERE
+			post_id =#{postId}
+	</update>
+	
+	<!-- 좋아요 수를 업데이트 한다. -->
+	<update id="setPostLikeCnt">
+		UPDATE post
+		SET
+			like_cnt = like_cnt + #{likeNum}
+		WHERE
+			post_id =#{postId}
+	</update>
+	
+	<delete id="deletePost" parameterType="int">
+		DELETE FROM
+			post
+		WHERE
+			post_id=#{postId}
+	</delete>
+</mapper>

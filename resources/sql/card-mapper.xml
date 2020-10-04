@@ -1,0 +1,174 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="card">
+	<resultMap id="cardResultMap" type="CardVO">
+		<id column="user_id" javaType="int" />
+		<association property="userVO" javaType="UserVO">
+			<id property="userId" column="user_id" />
+			<result property="userName" column="user_name" />
+			<result property="userPassword" column="user_password" />
+			<result property="userEmail" column="user_email" />
+			<result property="score" column="score" />
+			<result property="userRank" column="user_rank" />
+			<result property="mainPostId" column="main_post_id" />
+		</association>
+		<association property="postVO" javaType="PostVO">
+			<id property="postId" column="post_id" />
+			<result property="postTitle" column="post_title" />
+			<result property="postContent" column="post_content" />
+			<result property="postColor" column="post_color" />
+			<result property="postDatetime" column="post_datetime" />
+			<result property="userId" column="user_id" />
+			<result property="likeCnt" column="like_cnt" />
+			<result property="commentCnt" column="comment_cnt" />
+			<result property="checkLiked" column="check_liked" />
+		</association>
+	</resultMap>
+
+	<select id="getAllCard" resultMap="cardResultMap">
+		SELECT
+			user_id,
+			user_email,
+			user_name,
+			user_password,
+			score,
+			main_post_id,
+			reg_date,
+			check_liked,
+			post_id,
+			post_title,
+			post_content,
+			post_scope,
+			post_datetime,
+			post_color,
+			like_cnt,
+			comment_cnt,
+			(@rank := @rank + 1 ) AS rank,
+			(@final_rank := IF ( @last_score > score, @final_rank:=@final_rank+1, @final_rank ) ) AS user_rank,
+			(@last_score := score )
+		FROM
+			(SELECT @rank := 0, @last_score := 0, @final_rank := 1) AS r,
+			(SELECT
+				user.user_id AS user_id,
+				user_email,
+				user_name,
+				user_password,
+				score,
+				main_post_id,
+				reg_date,
+				l.check_liked AS check_liked,
+				post_id,
+				post_title,
+				post_content,
+				post_scope,
+				post_datetime,
+				post_color,
+				like_cnt,
+				comment_cnt
+			FROM
+				user
+				LEFT OUTER JOIN
+					post 
+				ON user.main_post_id = post.post_id
+				LEFT OUTER JOIN
+					(SELECT like_post_id, 1 AS check_liked
+					FROM likes
+					WHERE like_user_id = #{userId}) AS l
+				ON post.post_id = l.like_post_id) AS t
+		ORDER BY score DESC
+	</select>
+	<select id="getAllFriendsCard" resultMap="cardResultMap">
+		SELECT 
+			user_id,
+			user_email,
+			user_name,
+			user_password,
+			score,
+			main_post_id,
+			reg_date,
+			check_liked,
+			post_id,
+			post_title,
+			post_content,
+			post_scope,
+			post_datetime,
+			post_color,
+			like_cnt,
+			comment_cnt,
+			(@rank := @rank + 1 ) AS rank,
+			(@final_rank := IF ( @last_score > score, @final_rank:=@final_rank+1, @final_rank ) ) AS user_rank,
+			(@last_score := score )
+		FROM
+			(SELECT @rank := 0, @last_score := 0, @final_rank := 1) AS r,
+			(SELECT
+				f.user_id AS user_id,
+				user_email,
+				user_name,
+				user_password,
+				score,
+				main_post_id,
+				reg_date,
+				l.check_liked AS check_liked,
+				post_id,
+				post_title,
+				post_content,
+				post_scope,
+				post_datetime,
+				post_color,
+				like_cnt,
+				comment_cnt
+			FROM
+				(SELECT
+					user_id,
+					user_email,
+					user_name,
+					user_password,
+					score,
+					main_post_id,
+					reg_date
+				FROM
+					user WHERE user_id = #{userId}
+				UNION
+				SELECT
+					user.user_id,
+					user.user_email,
+					user.user_name,
+					user.user_password,
+					user.score,
+					user.main_post_id,
+					user.reg_date
+				FROM
+					friends LEFT JOIN user ON user.user_id = friends.receive_user_id
+				WHERE
+					friends.status = 1
+				AND friends.send_user_id = #{userId}
+				UNION
+				SELECT
+					user.user_id,
+					user.user_email,
+					user.user_name,
+					user.user_password,
+					user.score,
+					user.main_post_id,
+					user.reg_date
+				FROM
+					friends LEFT JOIN user ON user.user_id = friends.send_user_id
+				WHERE
+					friends.status = 1
+					AND friends.receive_user_id = #{userId}
+				) AS f
+			LEFT OUTER JOIN
+				post
+			ON f.main_post_id = post.post_id
+			LEFT OUTER JOIN
+				(SELECT like_post_id, 1 AS check_liked
+				FROM likes
+				WHERE like_user_id = #{userId}) AS l
+			ON post.post_id = l.like_post_id) AS t
+		ORDER BY score DESC
+	</select>
+</mapper>
+
+

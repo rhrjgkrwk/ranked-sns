@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="like">
+	<!-- 좋아요 -->
+	<insert id="addLike" parameterType="LikeVO">
+		INSERT INTO likes
+			(like_post_id, like_user_id, like_date)
+		VALUES 
+			(#{likePostId},#{likeUserId},SYSDATE())
+	</insert>	
+	
+	<!-- 좋아요를 이미 눌렀는지 체크. -->
+	<select id="checkLiked" resultType="int" parameterType="LikeVO">
+		SELECT COUNT(*)
+		FROM likes
+		WHERE 
+			like_post_id = #{likePostId}
+			AND like_user_id = #{likeUserId}
+	</select>
+	
+	<!-- 좋아요 취소 -->
+	<delete id="deleteLike" parameterType="LikeVO">
+		DELETE FROM 
+			likes
+		WHERE 
+			like_post_id = #{likePostId}
+			AND like_user_id = #{likeUserId}
+	</delete>
+</mapper>
